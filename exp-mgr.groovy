@@ -22,7 +22,9 @@ def readExpenses =
 def writeExpenses =
 {
   def writer = new BufferedWriter(new FileWriter(expFile))
-  expenses.collect({ e -> "${e.amount}" }).each { writer.write(it + "\r\n") }
+  def columns = expenses[0].keySet().sort()
+  writer.write(columns.join(';') + "\r\n")
+  expenses.collect({ e -> columns.collect({ c -> e[c]}).join(';') }).each { writer.write(it + "\r\n") }
   writer.close()
 }
 
@@ -59,4 +61,4 @@ while(line && line != "exit")
     addExpense(line.substring(4))
 }
 reader.close()
-// writeExpenses(expenses)
+writeExpenses(expenses)
