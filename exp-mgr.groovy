@@ -2,46 +2,51 @@ def f = java.text.NumberFormat.getNumberInstance()
 f.setMinimumFractionDigits(2)
 f.setMaximumFractionDigits(2)
 def expFile = new File("expenses.csv")
+def expenses = []
 
 def readExpenses =
 {
+  if(!expFile.canRead())
+    return []
   def expReader = new BufferedReader(new FileReader(expFile))
   def expLine = expReader.readLine()
-  def expenses = []
+  def expensesRead = []
   while(expLine)
   {
-    expenses.add(Float.parseFloat(expLine))
+    expensesRead.add([amount: Float.parseFloat(expLine)])
     expLine = expReader.readLine()
   }
-  return expenses
+  return expensesRead
 }
 
 def writeExpenses =
 {
-  expenses ->
   def writer = new BufferedWriter(new FileWriter(expFile))
-  expenses.collect({ e -> "$e" }).each { writer.write(it + "\r\n") }
+  expenses.collect({ e -> "${e.amount}" }).each { writer.write(it + "\r\n") }
   writer.close()
 }
 
 def listExpenses =
-{ expenses ->
-  def max = expenses.max()
+{ 
+  if(!expenses)
+    return
+  def max = expenses.collect({ it.amount }).max()
   def maxRep = f.format(max)
   int len = maxRep.length()
-  String template = "%${len}s".toString()
-  expenses.each { println(String.format(template, f.format(it))) }
+  String template = "%s %${len}s".toString()
+  expenses.each { println(String.format(template, "${it.key}", f.format(it.amount))) }
 }
 
 def addExpense =
 {
-  expenses, line ->
+  line ->
   def value = f.parse(line.trim())
-  expenses.add(value)
-  println "  Ausgabe hinzugefügt: ${f.format(value)}."
+  def expense = [ amount:value, key:"$value".sha256().substring(0, 7) ]
+  expenses.add(expense)
+  println "  Ausgabe hinzugefügt: ${expense}."
 }
 
-def expenses = readExpenses()
+expenses = readExpenses()
 def reader = new BufferedReader(new InputStreamReader(System.in))
 def line = "start"
 while(line && line != "exit")
@@ -49,9 +54,9 @@ while(line && line != "exit")
   print "> "
   line = reader.readLine()
   if(line == "list")
-    listExpenses(expenses)
+    listExpenses()
   if(line.startsWith("add "))
-    addExpense(expenses, line.substring(4))
+    addExpense(line.substring(4))
 }
 reader.close()
-writeExpenses(expenses)
+// writeExpenses(expenses)
